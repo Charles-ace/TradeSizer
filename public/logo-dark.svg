@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient for preview/isolated use -->
+    <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b111e" />
+      <stop offset="100%" stop-color="#030712" />
+    </linearGradient>
+
+    <!-- Emerald Primary Gradient -->
+    <linearGradient id="emGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- Cyan Accent Gradient -->
+    <linearGradient id="cyGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left: The TS Precision Mark Scaled (160x160 at x=20, y=20) -->
+  <g transform="translate(20, 20) scale(0.3125)">
+    <!-- Container Squircle Background -->
+    <rect x="18" y="18" width="476" height="476" rx="118" fill="#090d16" stroke="#334155" stroke-width="8" />
+
+    <!-- Upper Caliper Bar / T -->
+    <path d="M 124 144 L 388 144 A 16 16 0 0 1 404 160 L 404 196 A 16 16 0 0 1 388 212 L 326 212 L 326 234 A 14 14 0 0 1 312 248 L 282 248 L 282 212 L 230 212 L 230 248 A 14 14 0 0 1 216 262 L 186 262 A 14 14 0 0 1 172 248 L 172 212 L 124 212 A 16 16 0 0 1 108 196 L 108 160 A 16 16 0 0 1 124 144 Z" fill="url(#cyGrad)" />
+
+    <!-- Lower Sizing Wave / S -->
+    <path d="M 388 368 L 124 368 A 16 16 0 0 1 108 352 L 108 316 A 16 16 0 0 1 124 300 L 186 300 L 186 278 A 14 14 0 0 1 200 264 L 230 264 L 230 300 L 282 300 L 282 264 A 14 14 0 0 1 296 250 L 326 250 A 14 14 0 0 1 340 264 L 340 300 L 388 300 A 16 16 0 0 1 404 316 L 404 352 A 16 16 0 0 1 388 368 Z" fill="url(#emGrad)" />
+
+    <!-- Central Diamond & Crosshair -->
+    <polygon points="256,228 284,256 256,284 228,256" fill="#f8fafc" />
+    <circle cx="256" cy="256" r="10" fill="#030712" />
+    <circle cx="256" cy="256" r="5" fill="#10b981" />
+  </g>
+
+  <!-- Right: Bespoke Wordmark Typography -->
+  <!-- "TRADE" in Crisp Diamond White -->
+  <text x="200" y="112" font-family="'Geist', 'Segoe UI', -apple-system, sans-serif" font-size="68" font-weight="900" letter-spacing="4" fill="#ffffff">
+    TRADE<tspan fill="#34d399">SIZER</tspan>
+  </text>
+
+  <!-- Tagline / Subtitle Pill -->
+  <g transform="translate(202, 134)">
+    <!-- Pill background -->
+    <rect x="0" y="0" width="460" height="28" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1.5" />
+    <circle cx="14" cy="14" r="4" fill="#10b981" />
+    <text x="26" y="19" font-family="'JetBrains Mono', 'Consolas', monospace" font-size="12" font-weight="700" letter-spacing="2" fill="#94a3b8">
+      INSTITUTIONAL POSITION SIZING &amp; RISK ENGINE
+    </text>
+  </g>
+</svg>

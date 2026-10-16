@@ -27,6 +27,7 @@ import { AccountOverview } from './components/AccountOverview';
 import { ModelSelector } from './components/ModelSelector';
 import { TradeSetupForm } from './components/TradeSetupForm';
 import { ResultsPanel } from './components/ResultsPanel';
+import { BrandLogo } from './components/BrandLogo';
 
 // Icons
 import {
@@ -311,12 +312,10 @@ Parity     : BabyPips Verified • 60% Partial @ 3R (+1.80R Banked) • +3.40R N
         <div className="max-w-7xl mx-auto px-3 sm:px-5 h-11 flex items-center justify-between">
           {/* Brand & Parity Indicator */}
           <div className="flex items-center space-x-2.5">
-            <div className="w-6 h-6 rounded bg-[var(--color-ink)] text-[var(--color-page)] flex items-center justify-center font-mono font-bold text-xs shadow-xs select-none">
-              TS
-            </div>
+            <BrandLogo variant="mark" size="sm" />
             <div className="flex items-center space-x-2">
               <span className="font-extrabold text-sm tracking-tight text-[var(--color-ink)] font-mono select-none">
-                TRADESIZER
+                TRADE<span className="text-emerald-400">SIZER</span>
               </span>
               <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[var(--color-card-subtle)] text-[var(--color-ink-secondary)] border border-[var(--color-border)]">
                 67 INSTRUMENTS

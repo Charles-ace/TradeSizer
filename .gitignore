@@ -37,6 +37,8 @@ brag-output/
 *.png
 *.jpg
 *.jpeg
+!public/*.png
+!public/*.jpg
 
 # Local helper scripts
 test_deriv.html
