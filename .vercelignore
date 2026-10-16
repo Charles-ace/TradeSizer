@@ -1,0 +1,25 @@
+# Video renders and stock assets
+*.mp4
+*.webm
+*.wav
+*.mp3
+*.mov
+
+# Screen recordings & test captures
+demo_assets
+public/demo_assets
+brag-output
+*.png
+*.jpg
+*.jpeg
+
+# Local helper scripts
+scripts/
+*.cjs
+*.py
+record_app_interactions.js
+record_app_live_24s.js
+
+# Node / Build artifacts
+node_modules
+.git

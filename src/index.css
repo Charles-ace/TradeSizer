@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Apple-like Clean Silver / Light Palette */
+    --color-page: #f5f5f7;
+    --color-section: #ffffff;
+    --color-ink: #111214;
+    --color-ink-secondary: #515459;
+    --color-ink-muted: #86868b;
+    --color-ink-faint: #b0b0b8;
+    --color-border: rgba(0, 0, 0, 0.08);
+    --color-border-hover: rgba(0, 0, 0, 0.16);
+    --color-border-active: #111214;
+    --color-accent: #111214;
+    --color-accent-soft: rgba(0, 0, 0, 0.05);
+    --color-highlight: rgba(0, 0, 0, 0.06);
+    --color-success: #15803d;
+    --color-success-soft: rgba(21, 128, 61, 0.08);
+    --color-danger: #b91c1c;
+    --color-danger-soft: rgba(185, 28, 28, 0.08);
+    --color-card: #ffffff;
+    --color-card-subtle: #f9f9fb;
+    --color-terminal: #161616;
+    --color-terminal-ink: #eee;
+    --color-terminal-border: rgba(255, 255, 255, 0.16);
+    --color-terminal-muted: rgba(255, 255, 255, 0.5);
+    --shadow-card: 0 1px 0 #ffffffe0 inset, 0 8px 24px -6px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+    --shadow-card-active: 0 1px 0 #ffffffe0 inset, 0 0 0 1px #111214, 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+    --shadow-terminal: 0 2rem 5rem -1.5rem rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Geist", "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    color-scheme: light;
+  }
+
+  .dark {
+    /* Apple-like Dark Obsidian Palette */
+    --color-page: #0a0b0d;
+    --color-section: #121316;
+    --color-ink: #f5f5f7;
+    --color-ink-secondary: #9ea0a6;
+    --color-ink-muted: #6e7076;
+    --color-ink-faint: #44464c;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-hover: rgba(255, 255, 255, 0.16);
+    --color-border-active: rgba(255, 255, 255, 0.5);
+    --color-accent: #f5f5f7;
+    --color-accent-soft: rgba(255, 255, 255, 0.06);
+    --color-highlight: rgba(255, 255, 255, 0.10);
+    --color-success: #34d399;
+    --color-success-soft: rgba(52, 211, 153, 0.10);
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248, 113, 113, 0.10);
+    --color-card: #121316;
+    --color-card-subtle: #17181c;
+    --color-terminal: #0e0f12;
+    --color-terminal-ink: #f0f0f2;
+    --color-terminal-border: rgba(255, 255, 255, 0.08);
+    --color-terminal-muted: rgba(255, 255, 255, 0.45);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+    --shadow-card-active: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 0 0 1px rgba(255, 255, 255, 0.25), 0 12px 36px -8px rgba(0, 0, 0, 0.8);
+    --shadow-terminal: 0 24px 60px -15px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Geist", "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Neatlogs 1:1 Pixel-Perfect Card Architecture */
+.neat-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  border-radius: 12px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.neat-card-active {
+  border-color: var(--color-border-active) !important;
+  box-shadow: var(--shadow-card-active) !important;
+}
+
+/* Neatlogs Dark Code / Terminal Module with Mac Dots */
+.neat-terminal {
+  background-color: var(--color-terminal);
+  color: var(--color-terminal-ink);
+  border: 1px solid var(--color-terminal-border);
+  box-shadow: var(--shadow-terminal);
+  border-radius: 12px;
+}
+
+/* Neatlogs Compact Input Styling */
+.neat-input {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.neat-input:focus {
+  outline: none;
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 1px var(--color-ink);
+}
+
+/* Tactile Physics */
+.neat-press {
+  transition: transform 0.08s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.neat-press:active {
+  transform: scale(0.98);
+}
+
+/* Tabular Monospace Numerals for financial numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(130, 130, 130, 0.2);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(130, 130, 130, 0.35);
+}

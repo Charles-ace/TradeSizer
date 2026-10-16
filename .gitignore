@@ -1,0 +1,48 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary stock clips, demo assets & remotion cache
+demo_assets/
+.remotion/
+
+# Video renders and media
+*.mp4
+*.webm
+*.wav
+*.mp3
+*.mov
+brag-output/
+*.png
+*.jpg
+*.jpeg
+
+# Local helper scripts
+test_deriv.html
+generate_brag_voice.py
+capture_babypips_view.cjs
+record_app_interactions.js
+record_app_live_24s.js
+
+.vercel
