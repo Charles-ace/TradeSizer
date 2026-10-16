@@ -280,6 +280,26 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
     }
   };
 
+  const handleStopDistanceChange = (dist: number) => {
+    onChangeInput('stopLossDistance', dist);
+    const entry = inputs.entryPrice ?? livePrice;
+    if (entry && entry > 0 && dist > 0) {
+      let delta = dist;
+      if (activeSpec.category === 'forex') {
+        delta = dist * (activeSpec.pipSize || 0.0001);
+      }
+      const newStop = inputs.direction === 'long' ? entry - delta : entry + delta;
+      const decimals = activeSpec.symbol.includes('250_1S')
+        ? 5
+        : activeSpec.symbol.includes('50_INDEX')
+        ? 4
+        : activeSpec.symbol.includes('STEP')
+        ? 1
+        : 2;
+      onChangeInput('stopLossPrice', Number(newStop.toFixed(decimals)));
+    }
+  };
+
   // Quick R buttons for Take Level Price (+1R, +2R, +3R, +4R)
   const setQuickTakeProfitR = (rMultiple: number) => {
     const entry = inputs.entryPrice ?? livePrice;
@@ -745,21 +765,21 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
                 min="0.0001"
                 step="any"
                 value={inputs.stopLossDistance || ''}
-                onChange={(e) => onChangeInput('stopLossDistance', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleStopDistanceChange(parseFloat(e.target.value) || 0)}
                 placeholder="15"
                 className="neat-input w-full pl-2.5 pr-12 py-1.5 font-mono text-xs font-semibold tabular-nums"
               />
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center space-x-0.5">
                 <button
                   type="button"
-                  onClick={() => onChangeInput('stopLossDistance', Math.max(0.5, Number((inputs.stopLossDistance - 1).toFixed(2))))}
+                  onClick={() => handleStopDistanceChange(Math.max(0.5, Number((inputs.stopLossDistance - 1).toFixed(2))))}
                   className="w-4 h-4 rounded bg-[var(--color-card)] text-[var(--color-ink)] flex items-center justify-center text-[10px] font-bold cursor-pointer"
                 >
                   -
                 </button>
                 <button
                   type="button"
-                  onClick={() => onChangeInput('stopLossDistance', Number((inputs.stopLossDistance + 1).toFixed(2)))}
+                  onClick={() => handleStopDistanceChange(Number((inputs.stopLossDistance + 1).toFixed(2)))}
                   className="w-4 h-4 rounded bg-[var(--color-card)] text-[var(--color-ink)] flex items-center justify-center text-[10px] font-bold cursor-pointer"
                 >
                   +

@@ -492,4 +492,112 @@ describe('TradeSizer Core Calculation Engine — 3R/2R-Banked/4R-Final & Multi-A
     expect(result.actualRiskAmount).toBe(150.0);
     expect(result.units).toBe(0.15);
   });
+
+  // -------------------------------------------------------------
+  // Test Case 13: Deriv Jump 100 Index — User's Case ($25,000 account, 4.44 pts risk)
+  // -------------------------------------------------------------
+  it('13. Deriv Jump 100 Index: accurately calculates 10% risk ($2,500) and 1% risk ($250) without artificial 50-lot cap', () => {
+    const jump100Spec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'JUMP_100_INDEX')!;
+    expect(jump100Spec).toBeDefined();
+
+    // Case A: 10% Risk ($2,500)
+    const inputs10Pct: CalculationInputs = {
+      accountBalance: 25000,
+      accountCurrency: 'USD',
+      selectedModelId: 'A',
+      customRiskPercentage: 10,
+      category: 'deriv_synthetics',
+      symbol: 'JUMP_100_INDEX',
+      direction: 'long',
+      entryPrice: 122.19,
+      stopLossPrice: 117.75,
+      takeProfitPrice: 144.44,
+      stopLossDistance: 4.44,
+      stopLossUnit: 'price',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    };
+
+    const result10 = calculateTradeSizer(inputs10Pct, jump100Spec);
+    expect(result10.isValid).toBe(true);
+    expect(result10.lossPerLotAtStop).toBe(4.44);
+    expect(result10.plannedRiskAmount).toBe(2500.0);
+    // 2500 / 4.44 = 563.063 -> normalized to 563.06 lots (step 0.01)
+    expect(result10.normalizedPositionSize).toBe(563.06);
+    expect(result10.actualRiskAmount).toBeCloseTo(2499.99, 1);
+    expect(result10.actualRiskPercentage).toBe(10.0);
+    expect(result10.units).toBe(563.06);
+
+    // Case B: 1% Risk ($250)
+    const inputs1Pct: CalculationInputs = {
+      ...inputs10Pct,
+      customRiskPercentage: 1.0,
+    };
+
+    const result1 = calculateTradeSizer(inputs1Pct, jump100Spec);
+    expect(result1.isValid).toBe(true);
+    // 250 / 4.44 = 56.306 -> floored strictly to 56.30 lots to never exceed $250 budget
+    expect(result1.normalizedPositionSize).toBe(56.30);
+    expect(result1.actualRiskAmount).toBeCloseTo(249.97, 1);
+    expect(result1.actualRiskPercentage).toBe(1.0);
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 14: Deriv Step Index & Volatility 75 Index
+  // -------------------------------------------------------------
+  it('14. Deriv Step Index and V75 Index sizing precision', () => {
+    const stepSpec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'STEP_INDEX')!;
+    const v75Spec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'VOLATILITY_75_INDEX')!;
+
+    // Step Index: $10,000 account, 1% risk ($100), 50 pts stop -> 2.00 lots
+    const resultStep = calculateTradeSizer({
+      accountBalance: 10000,
+      accountCurrency: 'USD',
+      selectedModelId: 'C',
+      customRiskPercentage: 1.0,
+      category: 'deriv_synthetics',
+      symbol: 'STEP_INDEX',
+      direction: 'long',
+      entryPrice: 8500.0,
+      stopLossPrice: 8450.0,
+      stopLossDistance: 50.0,
+      stopLossUnit: 'price',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    }, stepSpec);
+
+    expect(resultStep.isValid).toBe(true);
+    expect(resultStep.normalizedPositionSize).toBe(2.00);
+    expect(resultStep.actualRiskAmount).toBe(100.0);
+
+    // V75 Index: $5,000 account, 1% risk ($50), 1000 pts stop -> 0.050 lots
+    const resultV75 = calculateTradeSizer({
+      accountBalance: 5000,
+      accountCurrency: 'USD',
+      selectedModelId: 'D',
+      customRiskPercentage: 1.0,
+      category: 'deriv_synthetics',
+      symbol: 'VOLATILITY_75_INDEX',
+      direction: 'long',
+      entryPrice: 350000.0,
+      stopLossPrice: 349000.0,
+      stopLossDistance: 1000.0,
+      stopLossUnit: 'price',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    }, v75Spec);
+
+    expect(resultV75.isValid).toBe(true);
+    expect(resultV75.normalizedPositionSize).toBe(0.050);
+    expect(resultV75.actualRiskAmount).toBe(50.0);
+  });
 });

@@ -185,6 +185,8 @@ export function normalizePositionSize(
 ): {
   normalizedLot: number;
   isMinLotViolated: boolean;
+  maxLotCapped?: boolean;
+  rawUncappedLots?: number;
   warning?: string;
 } {
   if (rawLot <= 0) {
@@ -226,14 +228,22 @@ export function normalizePositionSize(
 
   let normalized = minLot + steps * lotStep;
   normalized = Number(normalized.toFixed(precision));
+  const rawUncappedLots = normalized;
+  let maxLotCapped = false;
+  let warningMsg: string | undefined = undefined;
 
   if (normalized > maxLot) {
     normalized = maxLot;
+    maxLotCapped = true;
+    warningMsg = `Calculated position (${rawUncappedLots.toFixed(precision)} lots) exceeds single-order broker limit (${maxLot} lots). Sizing capped to ${maxLot} lots per ticket.`;
   }
 
   return {
     normalizedLot: normalized,
     isMinLotViolated: false,
+    maxLotCapped,
+    rawUncappedLots,
+    warning: warningMsg,
   };
 }
 
@@ -408,11 +418,26 @@ export function calculateTradeSizer(
   const {
     normalizedLot,
     isMinLotViolated,
+    maxLotCapped,
+    rawUncappedLots,
     warning: normWarning,
   } = normalizePositionSize(rawPositionSize, spec.minLot, spec.lotStep, spec.maxLot);
 
   if (normWarning) {
     warnings.push(normWarning);
+  }
+
+  // Calculate ticket splits if single-order limit is exceeded
+  const precision = getDecimalPlaces(spec.lotStep);
+  let ticketSplits: { numTickets: number; ticketSize: number; remainderSize: number } | undefined = undefined;
+  if (maxLotCapped && rawUncappedLots && rawUncappedLots > spec.maxLot) {
+    const numFullTickets = Math.floor(rawUncappedLots / spec.maxLot);
+    const remainder = Number((rawUncappedLots - numFullTickets * spec.maxLot).toFixed(precision));
+    ticketSplits = {
+      numTickets: remainder > 0 ? numFullTickets + 1 : numFullTickets,
+      ticketSize: spec.maxLot,
+      remainderSize: remainder,
+    };
   }
 
   // Actual risk after normalization
@@ -425,8 +450,6 @@ export function calculateTradeSizer(
   let partialDetails: PartialExitDetails | undefined = undefined;
   let headlineTargetProfit = 0;
   let headlineTargetR = targetR;
-
-  const precision = getDecimalPlaces(spec.lotStep);
 
   if (model.hasPartial && normalizedLot > 0) {
     // Close fraction (e.g. 60% = 0.60)
@@ -693,5 +716,8 @@ export function calculateTradeSizer(
     exchangeRateUsed: inputs.exchangeRate,
     conversionNote,
     isMinLotViolated,
+    maxLotCapped,
+    rawUncappedLots,
+    ticketSplits,
   };
 }

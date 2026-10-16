@@ -164,4 +164,11 @@ export interface CalculationResult {
   exchangeRateUsed: number | null;
   conversionNote?: string;
   isMinLotViolated: boolean;
+  maxLotCapped?: boolean;
+  rawUncappedLots?: number;
+  ticketSplits?: {
+    numTickets: number;
+    ticketSize: number;
+    remainderSize: number;
+  };
 }

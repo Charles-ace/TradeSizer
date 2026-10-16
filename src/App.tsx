@@ -319,7 +319,7 @@ Parity     : BabyPips Verified • 60% Partial @ 3R (+1.80R Banked) • +3.40R N
                 TRADESIZER
               </span>
               <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[var(--color-card-subtle)] text-[var(--color-ink-secondary)] border border-[var(--color-border)]">
-                43 PAIRS
+                67 INSTRUMENTS
               </span>
               <span className="hidden md:inline-flex items-center space-x-1 text-[10px] font-mono text-[var(--color-ink-muted)]">
                 <ShieldCheck className="w-3 h-3 text-[var(--color-ink-muted)]" />
@@ -399,7 +399,7 @@ Parity     : BabyPips Verified • 60% Partial @ 3R (+1.80R Banked) • +3.40R N
 
         {/* Sections C & D: Responsive 2-Column Compact Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-start">
-          {/* Left Column: Trade Setup Form with ALL 43 PAIRS (7 cols on lg) */}
+          {/* Left Column: Trade Setup Form with ALL 67 INSTRUMENTS (7 cols on lg) */}
           <div className="lg:col-span-7 space-y-2.5">
             <TradeSetupForm
               inputs={calculationInputs}

@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="hidden md:flex items-center space-x-5 text-xs font-medium text-[var(--color-ink-secondary)]">
           <span className="text-[var(--color-ink)] font-semibold cursor-pointer">Sizing Engine</span>
           <span className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Risk Models</span>
-          <span className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">40+ Pairs</span>
+          <span className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">67 Instruments</span>
           <span className="hover:text-[var(--color-ink)] cursor-pointer transition-colors">Order Ticket</span>
         </nav>
 

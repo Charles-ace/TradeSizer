@@ -53,6 +53,23 @@ Stage 1 : Close ${formatLots(p.actualPartialLots, spec.lotStep)} lots at ${p.tri
 Stage 2 : Run ${formatLots(p.remainderLots, spec.lotStep)} lots to ${result.targetRMultiple}R -> Net +${formatCurrency(p.fullWinTotalDollar, inputs.accountCurrency)} (+${p.fullWinTotalR}R)`;
     }
 
+    if (spec.category === 'deriv_synthetics') {
+      let splitText = '';
+      if (result.ticketSplits && result.ticketSplits.numTickets > 1) {
+        splitText = `\nMulti-Ticket : ${result.ticketSplits.numTickets} Orders (Max ${result.ticketSplits.ticketSize} lots/ticket)`;
+      }
+      return `// TRADESIZER DERIV MT5 EXECUTION TICKET
+Broker       : DERIV BROKER (MT5 Synthetics)
+Symbol       : ${spec.symbol} (${spec.name})
+Direction    : ${inputs.direction.toUpperCase()}
+Order Volume : ${formatLots(result.normalizedPositionSize, spec.lotStep)} Lots
+Contract Size: 1 Unit / Lot (No 100k multiplier)
+Point Value  : $1.00 USD per 1.0 pt
+Risk Budget  : ${formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} (${result.actualRiskPercentage.toFixed(2)}%)
+Target Profit: +${formatCurrency(result.actualTargetProfit, inputs.accountCurrency)} (+${result.rewardToRiskRatio}R)
+Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.accountCurrency)} (1:${result.marginDetails.leverage})${splitText}${partialText}`;
+    }
+
     return `// TRADESIZER EXECUTION TICKET
 Symbol       : ${spec.symbol} (${spec.name})
 Direction    : ${inputs.direction.toUpperCase()}
@@ -129,12 +146,18 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
         </div>
       )}
 
-      {/* PRIMARY POSITION SIZE CALLOUT (BABYPIPS STANDARD) */}
+      {/* PRIMARY POSITION SIZE CALLOUT */}
       <div className="neat-card p-4 relative overflow-hidden">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center space-x-1.5 text-[10px] text-[var(--color-ink-muted)] uppercase tracking-wider font-bold mb-0.5">
-              <span>Position Size (Standard Lots)</span>
+              <span>
+                {spec.category === 'deriv_synthetics'
+                  ? 'Position Size (Deriv MT5 Volume)'
+                  : spec.category === 'crypto'
+                  ? 'Position Size (Crypto Lots)'
+                  : 'Position Size (Standard Lots)'}
+              </span>
             </div>
 
             <div className="flex items-baseline space-x-2">
@@ -155,7 +178,10 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               </span>
               <span>•</span>
               <span>
-                Units: <span className="font-mono text-[var(--color-ink)] font-semibold">{unitsDisplay}</span>
+                Units:{' '}
+                <span className="font-mono text-[var(--color-ink)] font-semibold">
+                  {spec.category === 'deriv_synthetics' ? `${unitsDisplay} Contracts (1 unit/lot)` : unitsDisplay}
+                </span>
               </span>
             </div>
           </div>
@@ -186,74 +212,177 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
         </div>
       </div>
 
-      {/* BABYPIPS 1:1 EXACT 5-ROW SIZING BREAKDOWN */}
-      <div className="neat-card overflow-hidden">
-        <div className="px-3.5 py-2 bg-[var(--color-card-subtle)] border-b border-[var(--color-border)] flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)] font-mono">
-            BabyPips Sizing Breakdown
-          </span>
-          <span className="text-[9px] font-mono text-[var(--color-ink-muted)]">
-            {spec.symbol}
-          </span>
-        </div>
-
-        <div className="divide-y divide-[var(--color-border)] text-xs">
-          {/* Row 1: Amount at Risk */}
-          <div className="px-3.5 py-2.5 flex items-center justify-between">
-            <span className="text-[var(--color-ink-secondary)] font-medium">
-              Amount at Risk:
+      {/* SIZING BREAKDOWN: DERIV CONTRACT SPECS vs BABYPIPS FOREX 1:1 */}
+      {spec.category === 'deriv_synthetics' ? (
+        <div className="neat-card overflow-hidden">
+          <div className="px-3.5 py-2 bg-[var(--color-card-subtle)] border-b border-[var(--color-border)] flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
+              Deriv MT5 Sizing &amp; Contract Specs
             </span>
-            <div className="text-right">
-              <span className="font-mono font-bold text-rose-400 text-sm tabular-nums">
-                {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)}
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              {spec.symbol} • DERIV BROKER
+            </span>
+          </div>
+
+          <div className="divide-y divide-[var(--color-border)] text-xs">
+            {/* Row 1: Amount at Risk */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Amount at Risk:
               </span>
-              <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
-                ({result.actualRiskPercentage.toFixed(2)}%)
+              <div className="text-right">
+                <span className="font-mono font-bold text-rose-400 text-sm tabular-nums">
+                  {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)}
+                </span>
+                <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
+                  ({result.actualRiskPercentage.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2: MT5 Order Volume */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                MT5 Order Volume:
+              </span>
+              <div className="text-right">
+                <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                  {standardLotsDisplay} Lots
+                </span>
+                <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1">
+                  ({unitsDisplay} units)
+                </span>
+                {result.maxLotCapped && (
+                  <span className="text-[9px] font-mono text-amber-400 block">
+                    (Capped at {spec.maxLot} lots/order)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Contract Multiplier */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Contract Multiplier:
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-xs tabular-nums">
+                1 Unit / Lot (No 100k Multiplier)
+              </span>
+            </div>
+
+            {/* Row 4: Point Value */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Point Value ($/pt):
+              </span>
+              <span className="font-mono font-bold text-emerald-400 text-xs tabular-nums">
+                $1.00 USD per 1.0 Point per 1.0 Lot
+              </span>
+            </div>
+
+            {/* Row 5: Stop Loss Distance */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Stop Loss Distance:
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-xs tabular-nums">
+                {inputs.entryPrice && inputs.stopLossPrice
+                  ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(spec.symbol.includes('STEP') ? 1 : 2)} Points ($${result.lossPerLotAtStop.toFixed(2)} / Lot)`
+                  : `${inputs.stopLossDistance} Points ($${result.lossPerLotAtStop.toFixed(2)} / Lot)`}
+              </span>
+            </div>
+
+            {/* Row 6: Broker MT5 Limits */}
+            <div className="px-3.5 py-2 flex items-center justify-between bg-[var(--color-card-subtle)]/40 text-[11px]">
+              <span className="text-[var(--color-ink-muted)]">
+                MT5 Volume Constraints:
+              </span>
+              <span className="font-mono text-[var(--color-ink-muted)]">
+                Min: {spec.minLot} • Step: {spec.lotStep} • Max: {spec.maxLot} Lots
+              </span>
+            </div>
+
+            {/* Row 7: Ticket Splitting if applicable */}
+            {result.ticketSplits && result.ticketSplits.numTickets > 1 && (
+              <div className="px-3.5 py-2 bg-amber-500/10 border-t border-amber-500/20 text-[11px] flex items-center justify-between text-amber-300 font-mono">
+                <span>Multi-Order Split:</span>
+                <span>
+                  {result.ticketSplits.numTickets} tickets (Max {result.ticketSplits.ticketSize} lots/ticket)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* BABYPIPS 1:1 EXACT 5-ROW SIZING BREAKDOWN */
+        <div className="neat-card overflow-hidden">
+          <div className="px-3.5 py-2 bg-[var(--color-card-subtle)] border-b border-[var(--color-border)] flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)] font-mono">
+              BabyPips Sizing Breakdown
+            </span>
+            <span className="text-[9px] font-mono text-[var(--color-ink-muted)]">
+              {spec.symbol}
+            </span>
+          </div>
+
+          <div className="divide-y divide-[var(--color-border)] text-xs">
+            {/* Row 1: Amount at Risk */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Amount at Risk:
+              </span>
+              <div className="text-right">
+                <span className="font-mono font-bold text-rose-400 text-sm tabular-nums">
+                  {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)}
+                </span>
+                <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
+                  ({result.actualRiskPercentage.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2: Position Size (units) */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Position Size (units):
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                {unitsDisplay}
+              </span>
+            </div>
+
+            {/* Row 3: Standard Lots */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Standard Lots (100k):
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                {standardLotsDisplay}
+              </span>
+            </div>
+
+            {/* Row 4: Mini Lots */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Mini Lots (10k):
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                {miniLotsDisplay}
+              </span>
+            </div>
+
+            {/* Row 5: Micro Lots */}
+            <div className="px-3.5 py-2.5 flex items-center justify-between">
+              <span className="text-[var(--color-ink-secondary)] font-medium">
+                Micro Lots (1k):
+              </span>
+              <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                {microLotsDisplay}
               </span>
             </div>
           </div>
-
-          {/* Row 2: Position Size (units) */}
-          <div className="px-3.5 py-2.5 flex items-center justify-between">
-            <span className="text-[var(--color-ink-secondary)] font-medium">
-              Position Size (units):
-            </span>
-            <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
-              {unitsDisplay}
-            </span>
-          </div>
-
-          {/* Row 3: Standard Lots */}
-          <div className="px-3.5 py-2.5 flex items-center justify-between">
-            <span className="text-[var(--color-ink-secondary)] font-medium">
-              Standard Lots (100k):
-            </span>
-            <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
-              {standardLotsDisplay}
-            </span>
-          </div>
-
-          {/* Row 4: Mini Lots */}
-          <div className="px-3.5 py-2.5 flex items-center justify-between">
-            <span className="text-[var(--color-ink-secondary)] font-medium">
-              Mini Lots (10k):
-            </span>
-            <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
-              {miniLotsDisplay}
-            </span>
-          </div>
-
-          {/* Row 5: Micro Lots */}
-          <div className="px-3.5 py-2.5 flex items-center justify-between">
-            <span className="text-[var(--color-ink-secondary)] font-medium">
-              Micro Lots (1k):
-            </span>
-            <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
-              {microLotsDisplay}
-            </span>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* TARGET & MARGIN SUMMARY */}
       <div className="grid grid-cols-2 gap-2 text-xs">
