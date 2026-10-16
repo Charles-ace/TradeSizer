@@ -388,13 +388,18 @@ Parity     : BabyPips Verified • 60% Partial @ 3R (+1.80R Banked) • +3.40R N
           model={currentModel}
           plannedRiskAmount={plannedRiskAmount}
           plannedTargetProfit={headlineTargetProfit}
+          activeRiskPercentage={activeRiskPercentage}
+          isCustomRisk={customRiskPercentage !== undefined && customRiskPercentage > 0}
           onBalanceChange={(newBal) => setAccountBalance(newBal)}
         />
 
         {/* Section B: Compact Model Selector */}
         <ModelSelector
           selectedModelId={selectedModelId}
-          onSelectModel={(id) => setSelectedModelId(id)}
+          onSelectModel={(id) => {
+            setSelectedModelId(id);
+            setCustomRiskPercentage(TRADING_MODELS[id].riskPercentage);
+          }}
         />
 
         {/* Sections C & D: Responsive 2-Column Compact Layout */}

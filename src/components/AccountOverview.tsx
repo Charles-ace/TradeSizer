@@ -8,6 +8,8 @@ interface AccountOverviewProps {
   model: ModelDefinition;
   plannedRiskAmount: number;
   plannedTargetProfit: number;
+  activeRiskPercentage: number;
+  isCustomRisk?: boolean;
   onBalanceChange: (balance: number) => void;
 }
 
@@ -17,6 +19,8 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   model,
   plannedRiskAmount,
   plannedTargetProfit,
+  activeRiskPercentage,
+  isCustomRisk,
 }) => {
   return (
     <section className="neat-card p-2 sm:p-2.5">
@@ -44,7 +48,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             {model.name}
           </div>
           <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
-            {model.group} • {model.riskPercentage}% Risk
+            {isCustomRisk ? `Custom Risk • ${activeRiskPercentage}%` : `${model.group} • ${model.riskPercentage}% Risk`}
           </span>
         </div>
 
@@ -57,7 +61,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             -{formatCurrency(plannedRiskAmount, currency)}
           </div>
           <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
-            {model.riskPercentage}% loss ceiling
+            {activeRiskPercentage}% loss ceiling
           </span>
         </div>
 

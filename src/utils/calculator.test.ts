@@ -600,4 +600,41 @@ describe('TradeSizer Core Calculation Engine — 3R/2R-Banked/4R-Final & Multi-A
     expect(resultV75.normalizedPositionSize).toBe(0.050);
     expect(resultV75.actualRiskAmount).toBe(50.0);
   });
+
+  // -------------------------------------------------------------
+  // Test Case 15: SPX500 Index CFD — User's Case ($25,000 account, 0.5% risk, 67.4 pts stop)
+  // -------------------------------------------------------------
+  it('15. SPX500 Index CFD: accurately calculates 0.5% risk ($125) with 1.0 point = $1.00 USD and 0.01 lot step without under-sizing', () => {
+    const spxSpec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'SPX500')!;
+    expect(spxSpec).toBeDefined();
+
+    const result = calculateTradeSizer({
+      accountBalance: 25000,
+      accountCurrency: 'USD',
+      selectedModelId: 'A',
+      customRiskPercentage: 0.5,
+      category: 'indices',
+      symbol: 'SPX500',
+      direction: 'long',
+      entryPrice: 7668.9,
+      stopLossPrice: 7601.5,
+      takeProfitPrice: 7938.5,
+      stopLossDistance: 67.4,
+      stopLossUnit: 'price',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    }, spxSpec);
+
+    expect(result.isValid).toBe(true);
+    expect(result.lossPerLotAtStop).toBe(67.4);
+    expect(result.plannedRiskAmount).toBe(125.0);
+    // 125 / 67.4 = 1.854599 -> normalized to 1.85 lots (step 0.01)
+    expect(result.normalizedPositionSize).toBe(1.85);
+    expect(result.actualRiskAmount).toBe(124.69);
+    expect(result.actualRiskPercentage).toBe(0.5);
+    expect(result.isMinLotViolated).toBe(false);
+  });
 });

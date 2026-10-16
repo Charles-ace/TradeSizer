@@ -8,6 +8,7 @@ import {
   INSTRUMENT_CATALOG,
   resolveInstrument,
 } from '../constants/instruments';
+import { TRADING_MODELS } from '../constants/models';
 import { BrokerSpecsEditor } from './BrokerSpecsEditor';
 import {
   fetchLiveMarketPrices,
@@ -576,7 +577,8 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
             </label>
             <div className="flex items-center space-x-1">
               {[0.5, 1.0, 1.5, 2.0].map((rPct) => {
-                const currentRisk = inputs.customRiskPercentage ?? 1.5;
+                const activeModelRisk = TRADING_MODELS[inputs.selectedModelId]?.riskPercentage ?? 0.6;
+                const currentRisk = inputs.customRiskPercentage ?? activeModelRisk;
                 const isSelected = Math.abs(currentRisk - rPct) < 0.01;
                 return (
                   <button
@@ -601,12 +603,12 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
               min="0.01"
               max="50"
               step="0.1"
-              value={inputs.customRiskPercentage ?? ''}
+              value={inputs.customRiskPercentage !== undefined ? inputs.customRiskPercentage : (TRADING_MODELS[inputs.selectedModelId]?.riskPercentage ?? '')}
               onChange={(e) => {
                 const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
                 onChangeInput('customRiskPercentage', val);
               }}
-              placeholder="1.5"
+              placeholder={String(TRADING_MODELS[inputs.selectedModelId]?.riskPercentage ?? 0.6)}
               className="neat-input w-full pl-2.5 pr-6 py-1 text-xs font-mono font-semibold tabular-nums"
             />
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)] font-mono text-xs">
