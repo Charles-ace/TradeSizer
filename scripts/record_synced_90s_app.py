@@ -40,14 +40,18 @@ async def record_synced_app():
         page = await context.new_page()
         print("[*] Loading TradeSizer at http://localhost:5173...", flush=True)
         await page.goto("http://localhost:5173", wait_until="networkidle")
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(1200)
 
-        # Inject realistic Apple Pro spotlight cursor with dynamic ripple ring on click
+        # Inject high-performance 60fps requestAnimationFrame cursor engine with dynamic emerald ripple
         await page.evaluate("""() => {
+            window.__cursorPos = { x: 960, y: 240 };
+
             const cursor = document.createElement('div');
             cursor.id = 'demo-synced-cursor';
             cursor.style.cssText = `
                 position: fixed;
+                left: 960px;
+                top: 240px;
                 width: 22px;
                 height: 22px;
                 border-radius: 50%;
@@ -61,25 +65,50 @@ async def record_synced_app():
             `;
             document.body.appendChild(cursor);
 
-            window.addEventListener('mousemove', (e) => {
-                cursor.style.left = e.clientX + 'px';
-                cursor.style.top = e.clientY + 'px';
-            });
+            window.__moveCursor = (targetX, targetY, durationMs) => {
+                return new Promise((resolve) => {
+                    const startX = window.__cursorPos.x;
+                    const startY = window.__cursorPos.y;
+                    const startTime = performance.now();
 
-            window.addEventListener('mousedown', (e) => {
+                    function step(now) {
+                        const elapsed = now - startTime;
+                        const progress = Math.min(1.0, elapsed / durationMs);
+                        const ease = 1.0 - Math.pow(1.0 - progress, 3);
+                        const curX = startX + (targetX - startX) * ease;
+                        const curY = startY + (targetY - startY) * ease;
+                        
+                        cursor.style.left = curX + 'px';
+                        cursor.style.top = curY + 'px';
+                        window.__cursorPos = { x: curX, y: curY };
+
+                        if (progress < 1.0) {
+                            requestAnimationFrame(step);
+                        } else {
+                            cursor.style.left = targetX + 'px';
+                            cursor.style.top = targetY + 'px';
+                            window.__cursorPos = { x: targetX, y: targetY };
+                            resolve();
+                        }
+                    }
+                    requestAnimationFrame(step);
+                });
+            };
+
+            window.__clickCursor = () => {
                 cursor.style.transform = 'translate(-50%, -50%) scale(0.72)';
                 cursor.style.background = '#10b981';
 
                 const ripple = document.createElement('div');
                 ripple.style.cssText = `
                     position: fixed;
-                    left: ${e.clientX}px;
-                    top: ${e.clientY}px;
+                    left: ${window.__cursorPos.x}px;
+                    top: ${window.__cursorPos.y}px;
                     width: 10px;
                     height: 10px;
                     border-radius: 50%;
                     border: 2.5px solid #10b981;
-                    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+                    box-shadow: 0 0 14px rgba(16, 185, 129, 0.85);
                     pointer-events: none;
                     z-index: 9999998;
                     transform: translate(-50%, -50%);
@@ -87,12 +116,12 @@ async def record_synced_app():
                 `;
                 document.body.appendChild(ripple);
                 setTimeout(() => ripple.remove(), 380);
-            });
 
-            window.addEventListener('mouseup', () => {
-                cursor.style.transform = 'translate(-50%, -50%) scale(1)';
-                cursor.style.background = 'rgba(255, 255, 255, 0.96)';
-            });
+                setTimeout(() => {
+                    cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+                    cursor.style.background = 'rgba(255, 255, 255, 0.96)';
+                }, 120);
+            };
 
             const style = document.createElement('style');
             style.innerHTML = `
@@ -104,246 +133,255 @@ async def record_synced_app():
             document.head.appendChild(style);
         }""")
 
-        cur_pos = [960, 240]
+        async def move_to(x, y, duration_s=0.22):
+            duration_ms = max(80, int(duration_s * 1000))
+            await page.evaluate(f"window.__moveCursor({x}, {y}, {duration_ms})")
+            await asyncio.sleep(0.02)
 
-        async def move_to(x, y, duration_s=0.5):
-            steps = max(10, int(duration_s * 25))
-            x0, y0 = cur_pos[0], cur_pos[1]
-            for i in range(1, steps + 1):
-                t = i / steps
-                k = t * t * (3 - 2 * t)
-                mx = x0 + (x - x0) * k
-                my = y0 + (y - y0) * k
-                await page.mouse.move(mx, my)
-                await page.wait_for_timeout(int(duration_s * 1000 / steps))
-            cur_pos[0], cur_pos[1] = x, y
-
-        async def smooth_click(x, y, duration_s=0.5, wait_after_ms=250):
+        async def click_at(x, y, duration_s=0.22, wait_after_s=0.12):
             await move_to(x, y, duration_s)
-            await page.wait_for_timeout(80)
-            await page.mouse.down()
-            await page.wait_for_timeout(100)
-            await page.mouse.up()
-            await page.wait_for_timeout(wait_after_ms)
+            await page.evaluate("window.__clickCursor()")
+            await page.mouse.click(x, y)
+            if wait_after_s > 0:
+                await asyncio.sleep(wait_after_s)
 
-        async def click_loc(locator, duration_s=0.5, wait_after_ms=250):
+        async def click_loc(locator, duration_s=0.22, wait_after_s=0.12):
             box = await locator.bounding_box()
             if box:
-                await smooth_click(box['x'] + box['width']/2, box['y'] + box['height']/2, duration_s, wait_after_ms)
+                tx = box['x'] + box['width'] / 2
+                ty = box['y'] + box['height'] / 2
+                await click_at(tx, ty, duration_s, wait_after_s)
                 return True
             return False
 
-        async def hover_loc(locator, duration_s=0.5):
+        async def hover_loc(locator, duration_s=0.22):
             box = await locator.bounding_box()
             if box:
-                await move_to(box['x'] + box['width']/2, box['y'] + box['height']/2, duration_s)
+                tx = box['x'] + box['width'] / 2
+                ty = box['y'] + box['height'] / 2
+                await move_to(tx, ty, duration_s)
                 return True
             return False
 
-        async def type_loc(locator, text, duration_s=0.5, key_delay_ms=85):
-            box = await locator.bounding_box()
-            if box:
-                await smooth_click(box['x'] + box['width']/2, box['y'] + box['height']/2, duration_s, 100)
-                await page.keyboard.press("Control+A")
-                await page.wait_for_timeout(60)
-                await page.keyboard.press("Backspace")
-                await page.wait_for_timeout(100)
-                for char in text:
-                    await page.keyboard.press(char)
-                    await page.wait_for_timeout(key_delay_ms)
-                await page.wait_for_timeout(150)
-
-        # Wall-clock target synchronization helper
+        # Precise wall-clock target synchronization
         start_t = time.time()
 
-        async def wait_until_target(target_s):
+        async def wait_until_app_t(target_s):
             now = time.time() - start_t
             rem = target_s - now
-            if rem > 0:
-                await page.wait_for_timeout(int(rem * 1000))
+            if rem > 0.01:
+                await asyncio.sleep(rem)
 
         print(f"[*] Starting target-synchronized recording timeline at {time.strftime('%X')}...", flush=True)
 
         # -----------------------------------------------------------------
-        # BEAT 1 (0.0s - 4.0s): Console Entrance
-        # Voice (Master 8.0s - 12.0s): "...the institutional position sizer engineered for sixty-seven global instruments."
+        # BEAT 1 (0.0s - 4.0s): Console Entrance & 67 Instruments
+        # Voice: "...the institutional position sizer engineered for sixty-seven global instruments."
         # -----------------------------------------------------------------
-        print("[+] Beat 1 (0.0s - 4.0s): Entrance...", flush=True)
-        await move_to(960, 220, 0.8)
-        await wait_until_target(2.0)
-        badge = page.locator("text='67 INSTRUMENTS'").first
-        if await badge.count() > 0:
-            await hover_loc(badge, 0.6)
-        await wait_until_target(4.0)
+        print("[+] Beat 1 (0.0s - 4.0s): Entrance & 67 Instruments...", flush=True)
+        await move_to(960, 240, 0.25)
+        await wait_until_app_t(0.8)
+        
+        badge_67 = page.locator("text='67 INSTRUMENTS'").first
+        b_box = await badge_67.bounding_box()
+        if b_box:
+            await move_to(b_box['x'] + b_box['width']/2, b_box['y'] + b_box['height']/2, 0.24)
+        await wait_until_app_t(2.5)
+
+        badge_babypips = page.locator("text='BabyPips Parity'").first
+        p_box = await badge_babypips.bounding_box()
+        if p_box:
+            await move_to(p_box['x'] + p_box['width']/2, p_box['y'] + p_box['height']/2, 0.22)
+        await wait_until_app_t(4.0)
 
         # -----------------------------------------------------------------
         # BEAT 2 (4.0s - 14.5s): Live Feeds (FOREX.COM, Coinbase, DERIV Broker)
-        # Voice (Master 12.0s - 22.5s): "TradeSizer streams real-time institutional feeds directly from FOREX.COM for currencies and metals, Coinbase for crypto, and the DERIV Broker for synthetic volatilities."
+        # Voice: "TradeSizer streams real-time institutional feeds directly from FOREX.COM for currencies and metals, Coinbase for crypto, and the DERIV Broker for synthetic volatilities."
         # -----------------------------------------------------------------
         print("[+] Beat 2 (4.0s - 14.5s): Live Feeds Attribution...", flush=True)
-        # At 4.5s: Glide to DERIV Broker badge
-        deriv_badge = page.locator("text='DERIV Broker'").first
-        if await deriv_badge.count() > 0:
-            await hover_loc(deriv_badge, 0.6)
-        await wait_until_target(6.5)
+        # At 4.2s: Move to FOREX.COM badge
+        forex_badge = page.locator("text='FOREX.COM'").first
+        f_box = await forex_badge.bounding_box()
+        if f_box:
+            await move_to(f_box['x'] + f_box['width']/2, f_box['y'] + f_box['height']/2, 0.22)
+        await wait_until_app_t(5.2)
 
-        # At 6.5s: Click refresh button
+        # At 5.2s: Click refresh spinner button
         refresh_btn = page.locator("button[title='Refresh live prices']").first
-        if await refresh_btn.count() > 0:
-            await click_loc(refresh_btn, 0.5, 300)
-        await wait_until_target(8.5)
+        await click_loc(refresh_btn, 0.22, 0.15)
+        await wait_until_app_t(6.8)
 
-        # At 8.5s: Click Majors (FOREX.COM)
-        chip_majors = page.get_by_role("button", name="Majors").first
-        if await chip_majors.count() > 0:
-            await click_loc(chip_majors, 0.4, 200)
-        await wait_until_target(10.5)
+        # At 6.8s: Click Majors tab
+        tab_majors = page.get_by_role("button", name="Majors").first
+        await click_loc(tab_majors, 0.22, 0.12)
+        await wait_until_app_t(8.2)
 
-        # At 10.5s: Click Gold & Oil
-        chip_metals = page.get_by_role("button", name="Gold & Oil").first
-        if await chip_metals.count() > 0:
-            await click_loc(chip_metals, 0.4, 200)
-        await wait_until_target(12.5)
+        # At 8.2s: Click Gold & Oil tab
+        tab_metals = page.get_by_role("button", name="Gold & Oil").first
+        await click_loc(tab_metals, 0.22, 0.12)
+        await wait_until_app_t(9.6)
 
-        # At 12.5s: Click All 67 Instruments
-        btn_all = page.get_by_role("button", name="All 67 Instruments").first
-        if await btn_all.count() > 0:
-            await click_loc(btn_all, 0.4, 200)
-        await wait_until_target(14.5)
+        # At 9.6s: Click Crypto tab (Coinbase)
+        tab_crypto = page.get_by_role("button", name="BTC / ETH").first
+        await click_loc(tab_crypto, 0.22, 0.12)
+        await wait_until_app_t(11.2)
+
+        # At 11.2s: Click Deriv Volatilities tab (DERIV Broker)
+        tab_deriv = page.get_by_role("button", name="Deriv Volatilities").first
+        await click_loc(tab_deriv, 0.22, 0.12)
+        await wait_until_app_t(12.8)
+
+        # At 12.8s: Return to Majors & select EURUSD baseline
+        tab_majors = page.get_by_role("button", name="Majors").first
+        await click_loc(tab_majors, 0.22, 0.12)
+        
+        chip_eur = page.get_by_role("button", name="EURUSD").first
+        if await chip_eur.count() > 0:
+            await click_loc(chip_eur, 0.20, 0.12)
+        await wait_until_app_t(14.5)
 
         # -----------------------------------------------------------------
         # BEAT 3 (14.5s - 27.5s): Capital Setup ($50,000, 0.75% Risk = $375.00)
-        # Voice (Master 22.5s - 35.5s): "Setting up takes seconds. Click Account Balance, type fifty thousand dollars, and select your risk model. At zero point seven five percent, your cash risk is mathematically locked at three hundred and seventy-five dollars."
+        # Voice: "Setting up takes seconds. Click Account Balance, type fifty thousand dollars, and select your risk model. At zero point seven five percent, your cash risk is mathematically locked at three hundred and seventy-five dollars."
         # -----------------------------------------------------------------
-        print("[+] Beat 3 (14.5s - 27.5s): Capital Setup ($50k, 0.75% = $375)...", flush=True)
-        # At 14.8s: "Click Account Balance, type fifty thousand dollars"
-        balance_input = page.locator("input[type='number']").first
-        await type_loc(balance_input, "50000", 0.5, 90)
-        await wait_until_target(18.5)
+        print("[+] Beat 3 (14.5s - 27.5s): Capital Setup ($50k, 0.75% = $375.00)...", flush=True)
+        # At 14.8s: Click $50k preset button
+        btn_50k = page.locator("button:has-text('$50k')").last
+        await click_loc(btn_50k, 0.22, 0.12)
+        await wait_until_app_t(16.2)
 
-        # At 18.5s: "and select your risk model" -> Hover on Model A
+        # Click into Account Balance input box and re-type 50000
+        bal_input = page.locator("input[placeholder='10000']").first
+        b_input_box = await bal_input.bounding_box()
+        if b_input_box:
+            await click_at(b_input_box['x'] + b_input_box['width']/2, b_input_box['y'] + b_input_box['height']/2, 0.22)
+            await bal_input.fill("50000")
+        await wait_until_app_t(18.2)
+
+        # At 18.2s: Click Model A
         model_a = page.locator("button:has-text('Model A')").first
-        if await model_a.count() > 0:
-            await hover_loc(model_a, 0.5)
-        await wait_until_target(20.5)
+        await click_loc(model_a, 0.22, 0.12)
+        await wait_until_app_t(20.5)
 
-        # At 20.5s: "At zero point seven five percent" -> Click 0.75% chip
-        risk_075 = page.get_by_role("button", name="0.75%").first
-        if await risk_075.count() > 0:
-            await click_loc(risk_075, 0.4, 300)
-        await wait_until_target(23.5)
+        # At 20.5s: Click custom Risk % input and type 0.75
+        risk_input = page.locator("input[step='0.1']").first
+        r_box = await risk_input.bounding_box()
+        if r_box:
+            await click_at(r_box['x'] + r_box['width']/2, r_box['y'] + r_box['height']/2, 0.22)
+            await risk_input.fill("0.75")
+        await wait_until_app_t(23.2)
 
-        # At 23.5s: "locked at three hundred and seventy-five dollars" -> Point to $375.00
-        await move_to(760, 440, 0.6)
-        await wait_until_target(27.5)
+        # At 23.2s: Point directly to 1R Risk Budget (-$375.00) in Top KPI card
+        budget_card = page.locator("div:has-text('1R Risk Budget')").first
+        card_box = await budget_card.bounding_box()
+        if card_box:
+            await move_to(card_box['x'] + card_box['width']/2, card_box['y'] + card_box['height']/2, 0.24)
+        await wait_until_app_t(27.5)
 
         # -----------------------------------------------------------------
         # BEAT 4 (27.5s - 40.0s): Price Levels & +3R Target
-        # Voice (Master 35.5s - 48.0s): "Zero complicated jargon. Click Use Live Price to lock your entry, set your stop price fifteen pips below, and click plus three R to project your target level automatically."
+        # Voice: "Zero complicated jargon. Click Use Live Price to lock your entry, set your stop price fifteen pips below, and click plus three R to project your target level automatically."
         # -----------------------------------------------------------------
         print("[+] Beat 4 (27.5s - 40.0s): Price Levels & +3R Target...", flush=True)
-        # At 28.0s: "Click Use Live Price"
+        # At 28.0s: Click Use Live Price
         btn_live = page.get_by_role("button", name="Use Live Price").first
-        if await btn_live.count() > 0:
-            await click_loc(btn_live, 0.5, 300)
-        await wait_until_target(31.0)
+        await click_loc(btn_live, 0.22, 0.15)
+        await wait_until_app_t(30.5)
 
-        # At 31.0s: "set your stop price fifteen pips below"
+        # Read actual live entry price
+        entry_input = page.locator("input[placeholder*='1.']").first
+        entry_val = float(await entry_input.input_value() or 1.12394)
+        stop_val = f"{(entry_val - 0.00150):.5f}"
+
+        # At 31.0s: Click Stop loss input and fill exact 15 pips stop
         stop_input = page.locator("input[placeholder*='Stop loss']").first
-        await type_loc(stop_input, "1.11409", 0.5, 80)
-        await wait_until_target(35.0)
+        await click_loc(stop_input, 0.22, 0.1)
+        await stop_input.fill(stop_val)
+        await wait_until_app_t(35.0)
 
-        # At 35.0s: "click plus three R"
+        # At 35.0s: Click +3R button
         btn_3r = page.get_by_role("button", name="+3R").first
-        if await btn_3r.count() > 0:
-            await click_loc(btn_3r, 0.4, 400)
-        await wait_until_target(37.5)
+        await click_loc(btn_3r, 0.22, 0.15)
+        await wait_until_app_t(37.0)
 
-        # At 37.5s: "to project your target level automatically" -> Glide to Target Price
-        target_input = page.locator("input[placeholder*='Take profit']").first
-        if await target_input.count() > 0:
-            await hover_loc(target_input, 0.5)
-        await wait_until_target(40.0)
+        # At 37.0s: Glide to Take Level Price field showing projected target
+        await move_to(900, 680, 0.22)
+        await wait_until_app_t(40.0)
 
         # -----------------------------------------------------------------
-        # BEAT 5 (40.0s - 52.5s): Exact BabyPips Parity
-        # Voice (Master 48.0s - 60.5s): "On the results card: exact BabyPips parity. For three hundred seventy-five dollars risk, you get two point five zero standard lots, or two hundred fifty thousand units—strictly floored to guarantee zero round-up risk."
+        # BEAT 5 (40.0s - 52.5s): Exact BabyPips Parity (2.50 Lots, 250,000 Units)
+        # Voice: "On the results card: exact BabyPips parity. For three hundred seventy-five dollars risk, you get two point five zero standard lots, or two hundred fifty thousand units—strictly floored to guarantee zero round-up risk."
         # -----------------------------------------------------------------
-        print("[+] Beat 5 (40.0s - 52.5s): Exact BabyPips Parity (2.50 Lots, 250,000 Units)...", flush=True)
-        # 40.5s: Header
-        await move_to(760, 410, 0.5)
-        await wait_until_target(43.0)
+        print("[+] Beat 5 (40.0s - 52.5s): BabyPips Parity (2.50 Lots / 250k Units)...", flush=True)
+        # At 40.5s: Glide across to BabyPips Sizing Breakdown header
+        await move_to(1200, 405, 0.24)
+        await wait_until_app_t(43.2)
 
-        # 43.0s: Standard Lots (2.50 lots)
-        await move_to(760, 520, 0.5)
-        await wait_until_target(46.0)
+        # At 43.5s: Hover Amount at Risk: $375.00
+        await move_to(1335, 445, 0.22)
+        await wait_until_app_t(45.8)
 
-        # 46.0s: Units (250,000 units)
-        await move_to(760, 485, 0.5)
-        await wait_until_target(49.0)
+        # At 46.0s: Hover Hero Callout: 2.50 LOTS
+        await move_to(1160, 325, 0.22)
+        await wait_until_app_t(48.5)
 
-        # 49.0s: Floored Mini (25.0) & Micro (250.0)
-        await move_to(760, 560, 0.4)
-        await wait_until_target(51.0)
-        await move_to(760, 600, 0.4)
-        await wait_until_target(52.5)
+        # At 48.5s: Hover Position Size (units): 250,000
+        await move_to(1335, 480, 0.22)
+        await wait_until_app_t(50.5)
+
+        # At 50.5s: Glide down across Mini Lots (25.00) & Micro Lots (250.00)
+        await move_to(1335, 555, 0.20)
+        await wait_until_app_t(51.5)
+        await move_to(1335, 590, 0.20)
+        await wait_until_app_t(52.5)
 
         # -----------------------------------------------------------------
-        # BEAT 6 (52.5s - 64.8s): Deriv Volatilities (V75) & Bitcoin (Coinbase)
-        # Voice (Master 60.5s - 72.8s): "TradeSizer handles all markets seamlessly. Switch to Deriv Volatilities to size Volatility 75 with live WebSocket streaming, or jump to Bitcoin where fractional lots calculate with zero errors."
+        # BEAT 6 (52.5s - 64.8s): Deriv Volatilities & Bitcoin (Coinbase)
+        # Voice: "TradeSizer handles all markets seamlessly. Switch to Deriv Volatilities to size Volatility 75 with live WebSocket streaming, or jump to Bitcoin where fractional lots calculate with zero errors."
         # -----------------------------------------------------------------
         print("[+] Beat 6 (52.5s - 64.8s): Deriv Volatilities & Bitcoin...", flush=True)
-        # 53.0s: "Switch to Deriv Volatilities"
-        chip_deriv = page.get_by_role("button", name="Deriv Volatilities").first
-        if await chip_deriv.count() > 0:
-            await click_loc(chip_deriv, 0.5, 300)
-        await wait_until_target(55.5)
+        # At 53.0s: Click Deriv Volatilities tab
+        tab_deriv = page.get_by_role("button", name="Deriv Volatilities").first
+        await click_loc(tab_deriv, 0.22, 0.12)
+        await wait_until_app_t(54.8)
 
-        # 55.5s: "size Volatility 75 with live WebSocket streaming"
-        chip_v75 = page.get_by_role("button", name="VOLATILITY_75_INDEX").first
-        if await chip_v75.count() > 0:
-            await click_loc(chip_v75, 0.5, 400)
-        await wait_until_target(58.0)
+        # At 55.0s: Glide to Deriv MT5 contract specs card
+        await move_to(1300, 420, 0.24)
+        await wait_until_app_t(58.2)
 
-        # Hover over calculated V75 lot size
-        await move_to(760, 520, 0.5)
-        await wait_until_target(59.5)
+        # At 58.5s: Click BTC / ETH tab
+        tab_crypto = page.get_by_role("button", name="BTC / ETH").first
+        await click_loc(tab_crypto, 0.22, 0.12)
+        await wait_until_app_t(60.8)
 
-        # 59.5s: "or jump to Bitcoin"
-        chip_crypto = page.get_by_role("button", name="BTC / ETH").first
-        if await chip_crypto.count() > 0:
-            await click_loc(chip_crypto, 0.4, 200)
+        # At 61.0s: Glide to Crypto Hero Lots (fractional lots)
+        await move_to(1160, 325, 0.22)
+        await wait_until_app_t(62.8)
 
-        chip_btc = page.get_by_role("button", name="BTCUSD").first
-        if await chip_btc.count() > 0:
-            await click_loc(chip_btc, 0.4, 400)
-        await wait_until_target(62.0)
-
-        # 62.0s: "where fractional lots calculate with zero errors"
-        await move_to(760, 520, 0.5)
-        await wait_until_target(64.8)
+        # At 62.8s: Click Copy Lots button
+        copy_lots_btn = page.get_by_role("button", name="Copy Lots").first
+        await click_loc(copy_lots_btn, 0.20, 0.15)
+        await wait_until_app_t(64.8)
 
         # -----------------------------------------------------------------
-        # BEAT 7 (64.8s - 74.0s): 60% Partial Banking & 1-Click Ticket
-        # Voice (Master 72.8s - 82.0s): "Lock sixty percent at three R for guaranteed banking. When you are ready, one click copies your execution ticket directly to your platform or journal."
+        # BEAT 7 (64.8s - 74.0s): Exit Plan (60% @ 3R) & Execution Ticket
+        # Voice: "Lock sixty percent at three R for guaranteed banking. When you are ready, one click copies your execution ticket directly to your platform or journal."
         # -----------------------------------------------------------------
-        print("[+] Beat 7 (64.8s - 74.0s): 60% Partial Banking & Copy Ticket...", flush=True)
-        # 65.2s: "Lock sixty percent at three R"
-        await move_to(760, 720, 0.5)
-        await wait_until_target(68.5)
+        print("[+] Beat 7 (64.8s - 74.0s): Exit Plan & Copy Ticket...", flush=True)
+        # At 65.2s: Move to Exit Plan card on right panel
+        await move_to(1335, 740, 0.24)
+        await wait_until_app_t(68.5)
 
-        # 68.5s: "When you are ready, one click copies your execution ticket"
-        copy_btn = page.locator("button:has-text('Copy Ticket')").last
-        if await copy_btn.count() > 0:
-            await click_loc(copy_btn, 0.5, 300)
-        await wait_until_target(71.0)
+        # At 68.5s: Click Copy Ticket button in terminal
+        copy_ticket_btn = page.locator("button:has-text('Copy Ticket')").last
+        await click_loc(copy_ticket_btn, 0.22, 0.2)
+        await wait_until_app_t(71.5)
 
-        # Pause on verified green ticket
-        await move_to(760, 840, 0.5)
-        await wait_until_target(74.0)
+        # At 71.5s: Smooth glide up to top navbar Copy Ticket button
+        await move_to(1520, 22, 0.24)
+        await wait_until_app_t(74.0)
 
-        print("[*] 74.0s reached! Flushing video...", flush=True)
-        # Sever connections before closing so it closes instantly
+        print("[*] 74.0s reached! Closing recorder...", flush=True)
         await page.goto("about:blank")
         await page.close()
         await context.close()
