@@ -58,6 +58,9 @@ Stage 2 : Run ${formatLots(p.remainderLots, spec.lotStep)} lots to ${result.targ
       if (result.ticketSplits && result.ticketSplits.numTickets > 1) {
         splitText = `\nMulti-Ticket : ${result.ticketSplits.numTickets} Orders (Max ${result.ticketSplits.ticketSize} lots/ticket)`;
       }
+      const execDiff = result.actualRiskAmount !== result.plannedRiskAmount
+        ? `\nExecuted Risk: ${formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} (${result.actualRiskPercentage.toFixed(2)}% at ${formatLots(result.normalizedPositionSize, spec.lotStep)} lots)`
+        : '';
       return `// TRADESIZER DERIV MT5 EXECUTION TICKET
 Broker       : DERIV BROKER (MT5 Synthetics)
 Symbol       : ${spec.symbol} (${spec.name})
@@ -65,11 +68,14 @@ Direction    : ${inputs.direction.toUpperCase()}
 Order Volume : ${formatLots(result.normalizedPositionSize, spec.lotStep)} Lots
 Contract Size: 1 Unit / Lot (No 100k multiplier)
 Point Value  : $1.00 USD per 1.0 pt
-Risk Budget  : ${formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} (${result.actualRiskPercentage.toFixed(2)}%)
+Risk Budget  : ${formatCurrency(result.plannedRiskAmount, inputs.accountCurrency)} (${result.plannedRiskPercentage.toFixed(2)}%)${execDiff}
 Target Profit: +${formatCurrency(result.actualTargetProfit, inputs.accountCurrency)} (+${result.rewardToRiskRatio}R)
 Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.accountCurrency)} (1:${result.marginDetails.leverage})${splitText}${partialText}`;
     }
 
+    const execDiff = result.actualRiskAmount !== result.plannedRiskAmount
+      ? `\nExecuted Risk: ${formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} (${result.actualRiskPercentage.toFixed(2)}% at ${formatLots(result.normalizedPositionSize, spec.lotStep)} ${result.lotUnitName})`
+      : '';
     return `// TRADESIZER EXECUTION TICKET
 Symbol       : ${spec.symbol} (${spec.name})
 Direction    : ${inputs.direction.toUpperCase()}
@@ -77,7 +83,7 @@ Standard Lots: ${formatLots(result.normalizedPositionSize, spec.lotStep)} ${resu
 Mini Lots    : ${(result.miniLots ?? result.normalizedPositionSize * 10).toFixed(2)}
 Micro Lots   : ${(result.microLots ?? result.normalizedPositionSize * 100).toFixed(2)}
 Units        : ${(result.units ?? Math.round(result.normalizedPositionSize * spec.contractSize)).toLocaleString()}
-Risk Budget  : ${formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} (${result.actualRiskPercentage.toFixed(2)}%)
+Risk Budget  : ${formatCurrency(result.plannedRiskAmount, inputs.accountCurrency)} (${result.plannedRiskPercentage.toFixed(2)}%)${execDiff}
 Target Profit: +${formatCurrency(result.actualTargetProfit, inputs.accountCurrency)} (+${result.rewardToRiskRatio}R)
 Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.accountCurrency)} (1:${result.marginDetails.leverage})${partialText}`;
   };
@@ -232,11 +238,16 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               </span>
               <div className="text-right">
                 <span className="font-mono font-bold text-rose-400 text-sm tabular-nums">
-                  {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)}
+                  {formatCurrency(result.plannedRiskAmount, inputs.accountCurrency)}
                 </span>
                 <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
-                  ({result.actualRiskPercentage.toFixed(2)}%)
+                  ({result.plannedRiskPercentage.toFixed(2)}%)
                 </span>
+                {result.actualRiskAmount !== result.plannedRiskAmount && (
+                  <div className="text-[10px] font-mono text-[var(--color-ink-muted)] mt-0.5">
+                    Floored Exec: {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} ({result.actualRiskPercentage.toFixed(2)}% at {standardLotsDisplay} lots)
+                  </div>
+                )}
               </div>
             </div>
 
@@ -333,11 +344,16 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               </span>
               <div className="text-right">
                 <span className="font-mono font-bold text-rose-400 text-sm tabular-nums">
-                  {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)}
+                  {formatCurrency(result.plannedRiskAmount, inputs.accountCurrency)}
                 </span>
                 <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
-                  ({result.actualRiskPercentage.toFixed(2)}%)
+                  ({result.plannedRiskPercentage.toFixed(2)}%)
                 </span>
+                {result.actualRiskAmount !== result.plannedRiskAmount && (
+                  <div className="text-[10px] font-mono text-[var(--color-ink-muted)] mt-0.5">
+                    Floored Exec: {formatCurrency(result.actualRiskAmount, inputs.accountCurrency)} ({result.actualRiskPercentage.toFixed(2)}% at {standardLotsDisplay} lots)
+                  </div>
+                )}
               </div>
             </div>
 
@@ -346,9 +362,16 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               <span className="text-[var(--color-ink-secondary)] font-medium">
                 Position Size (units):
               </span>
-              <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
-                {unitsDisplay}
-              </span>
+              <div className="text-right">
+                <span className="font-mono font-bold text-[var(--color-ink)] text-sm tabular-nums">
+                  {unitsDisplay}
+                </span>
+                {result.rawUnits !== undefined && result.rawUnits !== result.units && (
+                  <span className="text-[10px] font-mono text-[var(--color-ink-muted)] ml-1.5">
+                    ({result.rawUnits.toLocaleString()} exact)
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Row 3: Standard Lots */}

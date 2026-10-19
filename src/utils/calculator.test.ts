@@ -637,4 +637,125 @@ describe('TradeSizer Core Calculation Engine — 3R/2R-Banked/4R-Final & Multi-A
     expect(result.actualRiskPercentage).toBe(0.5);
     expect(result.isMinLotViolated).toBe(false);
   });
+
+  // -------------------------------------------------------------
+  // Test Case 16: User's Screenshot Case — XAUUSD (Gold) 0.75% Risk on $25k Account
+  // -------------------------------------------------------------
+  it('16. XAUUSD (Gold): $25,000 balance with 0.75% risk has plannedRiskAmount $187.50 and plannedRiskPercentage 0.75% matching input 1:1', () => {
+    const goldSpec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'XAUUSD')!;
+    expect(goldSpec).toBeDefined();
+
+    const result = calculateTradeSizer({
+      accountBalance: 25000,
+      accountCurrency: 'USD',
+      selectedModelId: 'A',
+      customRiskPercentage: 0.75,
+      category: 'metals',
+      symbol: 'XAUUSD',
+      direction: 'long',
+      entryPrice: 4168.22,
+      stopLossPrice: 4207.90, // Stop distance = 39.68 points
+      stopLossDistance: 39.68,
+      stopLossUnit: 'price',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    }, goldSpec);
+
+    expect(result.isValid).toBe(true);
+    // 1. Planned Risk must strictly tally with user input 0.75% ($187.50)
+    expect(result.plannedRiskPercentage).toBe(0.75);
+    expect(result.plannedRiskAmount).toBe(187.50);
+
+    // 2. 1.0 standard lot (100 oz) risk = 39.68 * 100 = $3,968.00
+    expect(result.lossPerLotAtStop).toBe(3968.0);
+
+    // 3. Raw lots = 187.50 / 3968.00 = 0.047253 lots
+    expect(result.rawPositionSize).toBeCloseTo(0.047253, 5);
+
+    // 4. Broker floored position size at step 0.01 = 0.04 lots
+    expect(result.normalizedPositionSize).toBe(0.04);
+    expect(result.actualRiskAmount).toBe(158.72);
+    expect(result.actualRiskPercentage).toBe(0.63);
+
+    // 5. Units breakdown
+    expect(result.units).toBe(4);
+    expect(result.rawUnits).toBe(5);
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 17: Deriv Synthetics Risk Tallying & Execution Parity
+  // -------------------------------------------------------------
+  it('17. Deriv Synthetics: Planned Risk % tallies 1:1 with input field across V75, Step, Jump, Boom, and Crash', () => {
+    const derivSymbols = ['VOLATILITY_75_INDEX', 'STEP_INDEX', 'JUMP_100_INDEX', 'BOOM1000', 'CRASH1000'];
+    const testRiskPcts = [0.5, 0.75, 1.0, 1.5, 2.0];
+
+    for (const sym of derivSymbols) {
+      const spec = INSTRUMENT_CATALOG.find((i) => i.symbol === sym)!;
+      expect(spec).toBeDefined();
+
+      for (const riskPct of testRiskPcts) {
+        const result = calculateTradeSizer({
+          accountBalance: 20000,
+          accountCurrency: 'USD',
+          selectedModelId: 'A',
+          customRiskPercentage: riskPct,
+          category: 'deriv_synthetics',
+          symbol: sym,
+          direction: 'long',
+          stopLossDistance: 50,
+          stopLossUnit: 'price',
+          exchangeRate: null,
+          leverage: 100,
+          spread: 0,
+          commissionPerLot: 0,
+          moveStopToBreakeven: false,
+        }, spec);
+
+        expect(result.isValid).toBe(true);
+        // Planned Risk Percentage must match input 1:1
+        expect(result.plannedRiskPercentage).toBe(riskPct);
+        const expectedPlannedAmount = Number((20000 * (riskPct / 100)).toFixed(2));
+        expect(result.plannedRiskAmount).toBe(expectedPlannedAmount);
+
+        // Capital Protection: actual floored risk must NEVER exceed planned risk
+        expect(result.actualRiskAmount).toBeLessThanOrEqual(result.plannedRiskAmount + 0.01);
+      }
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 18: Full Catalog Audit — All instruments tally 1:1 with input risk %
+  // -------------------------------------------------------------
+  it('18. Full Catalog Audit: Planned Risk % matches input 1:1 across all instruments in catalog', () => {
+    const inputRisk = 0.75;
+    const balance = 50000;
+    const expectedBudget = Number((balance * (inputRisk / 100)).toFixed(2)); // $375.00
+
+    for (const spec of INSTRUMENT_CATALOG) {
+      const result = calculateTradeSizer({
+        accountBalance: balance,
+        accountCurrency: 'USD',
+        selectedModelId: 'A',
+        customRiskPercentage: inputRisk,
+        category: spec.category,
+        symbol: spec.symbol,
+        direction: 'long',
+        stopLossDistance: spec.defaultStopUnit === 'pips' ? 20 : 50,
+        stopLossUnit: spec.defaultStopUnit,
+        exchangeRate: spec.defaultExchangeRate ?? (spec.quoteCurrency === 'USD' ? null : 1.0),
+        leverage: 100,
+        spread: 0,
+        commissionPerLot: 0,
+        moveStopToBreakeven: false,
+      }, spec);
+
+      expect(result.isValid).toBe(true);
+      expect(result.plannedRiskPercentage).toBe(inputRisk);
+      expect(result.plannedRiskAmount).toBe(expectedBudget);
+      expect(result.actualRiskAmount).toBeLessThanOrEqual(result.plannedRiskAmount + 0.01);
+    }
+  });
 });

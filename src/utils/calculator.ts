@@ -352,6 +352,7 @@ export function calculateTradeSizer(
       actualRiskAmount: 0,
       actualRiskPercentage: 0,
       units: 0,
+      rawUnits: 0,
       standardLots: 0,
       miniLots: 0,
       microLots: 0,
@@ -393,6 +394,7 @@ export function calculateTradeSizer(
       actualRiskAmount: 0,
       actualRiskPercentage: 0,
       units: 0,
+      rawUnits: 0,
       standardLots: 0,
       miniLots: 0,
       microLots: 0,
@@ -643,6 +645,9 @@ export function calculateTradeSizer(
   if (spec.category === 'indices') lotUnitName = 'Contracts';
 
   // BabyPips 1:1 Parity Breakdown
+  const rawUnits = spec.category === 'forex' || spec.category === 'metals'
+    ? Math.round(rawPositionSize * spec.contractSize)
+    : Number((rawPositionSize * spec.contractSize).toFixed(4));
   const units = spec.category === 'forex' || spec.category === 'metals'
     ? Math.round(normalizedLot * spec.contractSize)
     : Number((normalizedLot * spec.contractSize).toFixed(4));
@@ -700,6 +705,7 @@ export function calculateTradeSizer(
     actualRiskAmount,
     actualRiskPercentage: Number(actualRiskPercentage.toFixed(2)),
     units,
+    rawUnits,
     standardLots,
     miniLots,
     microLots,

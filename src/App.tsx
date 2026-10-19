@@ -284,12 +284,15 @@ export const App: React.FC = () => {
   // Copy Ticket handler
   const handleCopyTicket = async () => {
     if (!calculationResult.isValid) return;
+    const execDiff = calculationResult.actualRiskAmount !== calculationResult.plannedRiskAmount
+      ? ` (Floored Exec: ${formatCurrency(calculationResult.actualRiskAmount, calculationInputs.accountCurrency)} / ${calculationResult.actualRiskPercentage.toFixed(2)}%)`
+      : '';
     const summary = `// TRADESIZER ORDER EXECUTION TICKET
 Model      : ${currentModel.name}
 Symbol     : ${activeSpec.symbol}
 Direction  : ${calculationInputs.direction.toUpperCase()}
 Position   : ${formatLots(calculationResult.normalizedPositionSize, activeSpec.lotStep)} ${calculationResult.lotUnitName}
-Risk       : ${formatCurrency(calculationResult.actualRiskAmount, calculationInputs.accountCurrency)} (${calculationResult.actualRiskPercentage.toFixed(2)}%)
+Risk Budget: ${formatCurrency(calculationResult.plannedRiskAmount, calculationInputs.accountCurrency)} (${calculationResult.plannedRiskPercentage.toFixed(2)}%)${execDiff}
 Target     : +${formatCurrency(calculationResult.actualTargetProfit, calculationInputs.accountCurrency)} (${calculationResult.rewardToRiskRatio}R)
 Req Margin : ${formatCurrency(calculationResult.marginDetails.marginRequired, calculationInputs.accountCurrency)}
 Parity     : BabyPips Verified • 60% Partial @ 3R (+1.80R Banked) • +3.40R Net Win`;

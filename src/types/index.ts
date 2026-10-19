@@ -134,6 +134,7 @@ export interface CalculationResult {
 
   // BabyPips 1:1 Parity Breakdown
   units?: number;
+  rawUnits?: number;
   standardLots?: number;
   miniLots?: number;
   microLots?: number;
