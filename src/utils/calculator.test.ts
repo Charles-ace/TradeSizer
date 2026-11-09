@@ -843,4 +843,181 @@ describe('TradeSizer Core Calculation Engine — 3R/2R-Banked/4R-Final & Multi-A
     // 4R final target price must be 20000 + 200 = 20200.0 (NOT 20020.0)
     expect(partial.finalTargetPrice).toBe(20200.0);
   });
+
+  // -------------------------------------------------------------
+  // Test Case 21: Full Deriv Synthetics Suite (All 28 instruments)
+  // -------------------------------------------------------------
+  it('21. Full Deriv Synthetics Suite: verifies calculation accuracy across all 28 Deriv instruments', () => {
+    const derivInstruments = INSTRUMENT_CATALOG.filter((i) => i.category === 'deriv_synthetics');
+    expect(derivInstruments.length).toBe(28);
+
+    const testBalances = [5000, 10000, 25000];
+    const testRiskPcts = [0.5, 1.0, 2.0];
+
+    for (const spec of derivInstruments) {
+      for (const balance of testBalances) {
+        for (const riskPct of testRiskPcts) {
+          const expectedRiskBudget = Number((balance * (riskPct / 100)).toFixed(2));
+          const stopDist = spec.symbol.includes('75_INDEX') ? 500 : (spec.symbol.includes('STEP') ? 10 : 25);
+
+          // Test Mode A: Points stop distance input
+          const resultDist = calculateTradeSizer({
+            accountBalance: balance,
+            accountCurrency: 'USD',
+            selectedModelId: 'A',
+            customRiskPercentage: riskPct,
+            category: 'deriv_synthetics',
+            symbol: spec.symbol,
+            direction: 'long',
+            stopLossDistance: stopDist,
+            stopLossUnit: 'points',
+            exchangeRate: null,
+            leverage: 100,
+            spread: 0,
+            commissionPerLot: 0,
+            moveStopToBreakeven: true,
+          }, spec);
+
+          expect(resultDist.isValid).toBe(true);
+          expect(resultDist.plannedRiskPercentage).toBe(riskPct);
+          expect(resultDist.plannedRiskAmount).toBe(expectedRiskBudget);
+          expect(resultDist.actualRiskAmount).toBeLessThanOrEqual(resultDist.plannedRiskAmount + 0.01);
+          expect(resultDist.units).toBe(resultDist.normalizedPositionSize);
+          expect(resultDist.lotUnitName).toBe('Lots');
+
+          // Sizing step compliance
+          if (resultDist.normalizedPositionSize > 0) {
+            expect(resultDist.normalizedPositionSize).toBeGreaterThanOrEqual(spec.minLot);
+            expect(resultDist.normalizedPositionSize).toBeLessThanOrEqual(spec.maxLot);
+          }
+
+          // Test Mode B: Direct Price Levels input
+          const entryPrice = 1000.0;
+          const stopPrice = entryPrice - stopDist;
+          const targetPrice = entryPrice + stopDist * 3;
+
+          const resultLevels = calculateTradeSizer({
+            accountBalance: balance,
+            accountCurrency: 'USD',
+            selectedModelId: 'C',
+            customRiskPercentage: riskPct,
+            category: 'deriv_synthetics',
+            symbol: spec.symbol,
+            direction: 'long',
+            entryPrice,
+            stopLossPrice: stopPrice,
+            takeProfitPrice: targetPrice,
+            stopLossDistance: stopDist,
+            stopLossUnit: 'points',
+            exchangeRate: null,
+            leverage: 100,
+            spread: 0,
+            commissionPerLot: 0,
+            moveStopToBreakeven: false,
+          }, spec);
+
+          expect(resultLevels.isValid).toBe(true);
+          expect(resultLevels.plannedRiskPercentage).toBe(riskPct);
+          expect(resultLevels.plannedRiskAmount).toBe(expectedRiskBudget);
+          expect(resultLevels.lossPerLotAtStop).toBe(stopDist);
+          expect(resultLevels.actualRiskAmount).toBeLessThanOrEqual(resultLevels.plannedRiskAmount + 0.01);
+          // 3R target profit matches actualRiskAmount * 3
+          expect(resultLevels.actualTargetProfit).toBe(Number((resultLevels.actualRiskAmount * 3).toFixed(2)));
+        }
+      }
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 22: Full Indices CFD Suite (All 8 instruments)
+  // -------------------------------------------------------------
+  it('22. Full Indices CFD Suite: verifies calculation accuracy and conversions across all 8 Index CFDs', () => {
+    const indexInstruments = INSTRUMENT_CATALOG.filter((i) => i.category === 'indices');
+    expect(indexInstruments.length).toBe(8);
+
+    const balance = 15000;
+    const riskPct = 1.0;
+    const expectedRiskBudget = 150.0;
+
+    for (const spec of indexInstruments) {
+      const stopDist = 50.0;
+      const rate = spec.defaultExchangeRate ?? 1.0;
+
+      const result = calculateTradeSizer({
+        accountBalance: balance,
+        accountCurrency: 'USD',
+        selectedModelId: 'D',
+        customRiskPercentage: riskPct,
+        category: 'indices',
+        symbol: spec.symbol,
+        direction: 'long',
+        stopLossDistance: stopDist,
+        stopLossUnit: 'points',
+        exchangeRate: rate,
+        leverage: 100,
+        spread: 0,
+        commissionPerLot: 0,
+        moveStopToBreakeven: false,
+      }, spec);
+
+      expect(result.isValid).toBe(true);
+      expect(result.plannedRiskPercentage).toBe(riskPct);
+      expect(result.plannedRiskAmount).toBe(expectedRiskBudget);
+      expect(result.actualRiskAmount).toBeLessThanOrEqual(result.plannedRiskAmount + 0.01);
+      expect(result.lotUnitName).toBe('Contracts');
+      expect(result.units).toBe(result.normalizedPositionSize);
+
+      if (result.normalizedPositionSize > 0) {
+        expect(result.normalizedPositionSize).toBeGreaterThanOrEqual(spec.minLot);
+        expect(result.normalizedPositionSize).toBeLessThanOrEqual(spec.maxLot);
+      }
+
+      // 3R headline target profit
+      expect(result.rewardToRiskRatio).toBe(3);
+      expect(result.actualTargetProfit).toBe(Number((result.actualRiskAmount * 3).toFixed(2)));
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 23: Custom TP & Estimated Gross Balance synchronization
+  // -------------------------------------------------------------
+  it('23. Custom TP & Estimated Gross Balance: accurately updates estimated gross balance and net profit', () => {
+    const us30Spec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'US30')!;
+    expect(us30Spec).toBeDefined();
+
+    const result = calculateTradeSizer({
+      accountBalance: 50000,
+      accountCurrency: 'USD',
+      selectedModelId: 'C', // 3R standard
+      customRiskPercentage: 1.0,
+      category: 'indices',
+      symbol: 'US30',
+      direction: 'long',
+      entryPrice: 43000,
+      stopLossPrice: 42900, // 100 pt stop = $100/contract
+      takeProfitPrice: 43400, // 400 pt target = 4R custom TP!
+      stopLossDistance: 100,
+      stopLossUnit: 'points',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: false,
+    }, us30Spec);
+
+    expect(result.isValid).toBe(true);
+    // 50000 * 1% = $500 risk
+    expect(result.plannedRiskAmount).toBe(500.0);
+    expect(result.lossPerLotAtStop).toBe(100.0);
+    // 500 / 100 = 5.00 contracts
+    expect(result.normalizedPositionSize).toBe(5.00);
+    expect(result.actualRiskAmount).toBe(500.0);
+
+    // Custom 4R target: 500 * 4 = $2000.00
+    expect(result.rewardToRiskRatio).toBe(4);
+    expect(result.actualTargetProfit).toBe(2000.0);
+    // Estimated Gross Balance: 50000 + 2000 = 52000.00
+    expect(result.estimatedGrossBalance).toBe(52000.0);
+    expect(result.costDetails.netFullWinProfit).toBe(2000.0);
+  });
 });

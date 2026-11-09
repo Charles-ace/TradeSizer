@@ -204,7 +204,7 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
       const stop = inputs.direction === 'long' ? price - stopDelta : price + stopDelta;
       const take = inputs.direction === 'long' ? price + stopDelta * 3 : price - stopDelta * 3;
       const decimals = found.symbol.includes('250_1S') ? 5 : (found.symbol.includes('50_INDEX') ? 4 : (found.symbol.includes('STEP') ? 1 : 2));
-      onChangeInput('stopLossUnit', 'price');
+      onChangeInput('stopLossUnit', 'points');
       onChangeInput('stopLossDistance', stopDelta);
       onChangeInput('stopLossPrice', Number(stop.toFixed(decimals)));
       onChangeInput('takeProfitPrice', Number(take.toFixed(decimals)));
@@ -326,6 +326,8 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
 
     const precision = activeSpec.category === 'forex'
       ? (activeSpec.symbol.includes('JPY') ? 3 : 5)
+      : activeSpec.category === 'deriv_synthetics'
+      ? (activeSpec.symbol.includes('250_1S') ? 5 : activeSpec.symbol.includes('50_INDEX') ? 4 : activeSpec.symbol.includes('STEP') ? 1 : 2)
       : (activeSpec.category === 'crypto' || activeSpec.category === 'metals' ? 2 : 1);
 
     const targetPrice = inputs.direction === 'long'

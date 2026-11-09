@@ -321,7 +321,15 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               </span>
               <span className="font-mono font-bold text-[var(--color-ink)] text-xs tabular-nums">
                 {inputs.entryPrice && inputs.stopLossPrice
-                  ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(spec.symbol.includes('STEP') ? 1 : 2)} Points ($${result.lossPerLotAtStop.toFixed(2)} / Lot)`
+                  ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(
+                      spec.symbol.includes('250_1S')
+                        ? 5
+                        : spec.symbol.includes('50_INDEX')
+                        ? 4
+                        : spec.symbol.includes('STEP')
+                        ? 1
+                        : 2
+                    )} Points ($${result.lossPerLotAtStop.toFixed(2)} / Lot)`
                   : `${inputs.stopLossDistance} Points ($${result.lossPerLotAtStop.toFixed(2)} / Lot)`}
               </span>
             </div>
@@ -417,7 +425,7 @@ Req Margin   : ${formatCurrency(result.marginDetails.marginRequired, inputs.acco
               </span>
               <div className="text-right min-w-0">
                 <span className="font-mono font-bold text-emerald-400 text-xs tabular-nums">
-                  {formatCurrency(result.lossPerLotAtStop / (Math.abs((inputs.entryPrice ?? 0) - (inputs.stopLossPrice ?? 0)) || inputs.stopLossDistance || 1), inputs.accountCurrency)} per 1.0 pt per Contract
+                  {formatCurrency(result.lossPerLotAtStop / ((inputs.entryPrice && inputs.stopLossPrice ? Math.abs(inputs.entryPrice - inputs.stopLossPrice) : inputs.stopLossDistance) || 1), inputs.accountCurrency)} per 1.0 pt per Contract
                 </span>
                 {result.conversionNote && (
                   <div className="text-[9px] font-mono text-[var(--color-ink-muted)] mt-0.5">

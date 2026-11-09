@@ -531,7 +531,9 @@ export function calculateTradeSizer(
         priceDelta = inputs.stopLossDistance;
       }
 
-      const precision = spec.category === 'forex' ? (spec.symbol.includes('JPY') ? 3 : 5) : 2;
+      const precision = spec.category === 'forex'
+        ? (spec.symbol.includes('JPY') ? 3 : 5)
+        : Math.max(spec.category === 'indices' ? 1 : 2, getDecimalPlaces(spec.tickSize || 0.01));
 
       if (inputs.direction === 'long') {
         stopPrice = Number((inputs.entryPrice - priceDelta).toFixed(precision));
@@ -642,7 +644,7 @@ export function calculateTradeSizer(
     netFullWinProfit,
   };
 
-  const estimatedGrossBalance = Number((inputs.accountBalance + headlineTargetProfit).toFixed(2));
+  let estimatedGrossBalance = Number((inputs.accountBalance + headlineTargetProfit).toFixed(2));
 
   // Determine lot unit name
   let lotUnitName = 'Lots';
@@ -708,6 +710,9 @@ export function calculateTradeSizer(
         }
       }
     }
+    // Re-sync estimated gross balance and net profit with custom take profit
+    estimatedGrossBalance = Number((inputs.accountBalance + headlineTargetProfit).toFixed(2));
+    costDetails.netFullWinProfit = Number((headlineTargetProfit - costDetails.totalCost).toFixed(2));
   }
 
   // Directional sanity check
