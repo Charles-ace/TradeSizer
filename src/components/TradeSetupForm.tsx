@@ -275,6 +275,12 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
       const pips = Number((delta / pipSize).toFixed(1));
       onChangeInput('stopLossUnit', 'pips');
       onChangeInput('stopLossDistance', pips > 0 ? pips : 1);
+    } else if (activeSpec.category === 'indices') {
+      onChangeInput('stopLossUnit', 'points');
+      onChangeInput('stopLossDistance', Number(delta.toFixed(1)));
+    } else if (activeSpec.category === 'deriv_synthetics') {
+      onChangeInput('stopLossUnit', 'points');
+      onChangeInput('stopLossDistance', Number(delta.toFixed(activeSpec.symbol.includes('STEP') ? 1 : 2)));
     } else {
       onChangeInput('stopLossUnit', 'price');
       onChangeInput('stopLossDistance', Number(delta.toFixed(activeSpec.category === 'crypto' ? 2 : 4)));
@@ -693,8 +699,10 @@ export const TradeSetupForm: React.FC<TradeSetupFormProps> = ({
                     ? activeSpec.category === 'forex'
                       ? `${(Math.abs(inputs.entryPrice - inputs.stopLossPrice) / (activeSpec.pipSize || 0.0001)).toFixed(1)} pips`
                       : activeSpec.category === 'deriv_synthetics'
-                        ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(activeSpec.symbol.includes('STEP') ? 1 : 2)} pts risk`
-                        : `$${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(activeSpec.category === 'crypto' ? 2 : 4)} risk`
+                        ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(activeSpec.symbol.includes('STEP') ? 1 : 2)} pts`
+                        : activeSpec.category === 'indices'
+                          ? `${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(1)} pts`
+                          : `$${Math.abs(inputs.entryPrice - inputs.stopLossPrice).toFixed(activeSpec.category === 'crypto' ? 2 : 2)} risk`
                     : inputs.stopLossDistance > 0 ? `${inputs.stopLossDistance} ${inputs.stopLossUnit}` : ''}
                 </span>
               </div>

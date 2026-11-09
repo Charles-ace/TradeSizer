@@ -519,12 +519,16 @@ export function calculateTradeSizer(
     if (inputs.entryPrice && inputs.entryPrice > 0) {
       breakevenPrice = inputs.entryPrice;
       let priceDelta = inputs.stopLossDistance;
-      if (inputs.stopLossUnit === 'pips') {
+      if (inputs.stopLossPrice && inputs.stopLossPrice > 0) {
+        priceDelta = Math.abs(inputs.entryPrice - inputs.stopLossPrice);
+      } else if (inputs.stopLossUnit === 'pips' && spec.category === 'forex') {
         const pipSize = spec.pipSize || 0.0001;
         priceDelta = inputs.stopLossDistance * pipSize;
-      } else if (inputs.stopLossUnit === 'points') {
+      } else if (inputs.stopLossUnit === 'ticks') {
         const tickSize = spec.tickSize || 1.0;
         priceDelta = inputs.stopLossDistance * tickSize;
+      } else {
+        priceDelta = inputs.stopLossDistance;
       }
 
       const precision = spec.category === 'forex' ? (spec.symbol.includes('JPY') ? 3 : 5) : 2;
@@ -663,15 +667,42 @@ export function calculateTradeSizer(
       : inputs.entryPrice - inputs.takeProfitPrice;
 
     if (profitDelta > 0) {
-      let stopDelta = inputs.stopLossDistance;
-      if (inputs.stopLossUnit === 'pips' && spec.category === 'forex') {
-        stopDelta = inputs.stopLossDistance * (spec.pipSize || 0.0001);
-      } else if (inputs.stopLossUnit === 'points' && spec.tickSize) {
-        stopDelta = inputs.stopLossDistance * spec.tickSize;
+      let stopDelta = 0;
+      if (inputs.stopLossPrice && inputs.stopLossPrice > 0) {
+        stopDelta = Math.abs(inputs.entryPrice - inputs.stopLossPrice);
+      } else {
+        if (inputs.stopLossUnit === 'pips' && spec.category === 'forex') {
+          stopDelta = inputs.stopLossDistance * (spec.pipSize || 0.0001);
+        } else if (inputs.stopLossUnit === 'ticks') {
+          stopDelta = inputs.stopLossDistance * (spec.tickSize || 1.0);
+        } else {
+          stopDelta = inputs.stopLossDistance;
+        }
       }
+
       if (stopDelta > 0) {
         const customR = Number((profitDelta / stopDelta).toFixed(2));
         if (!model.hasPartial) {
+          headlineTargetR = customR;
+          headlineTargetProfit = Number((actualRiskAmount * customR).toFixed(2));
+        } else if (partialDetails && partialDetails.canSplit) {
+          const actualBankedDollar = partialDetails.actualBankedDollar;
+          const remainderTargetAddedDollar = Number((partialDetails.remainderLots * customR * lossPerLot).toFixed(2));
+          const remainderTargetAddedR = actualRiskAmount > 0
+            ? Number((remainderTargetAddedDollar / actualRiskAmount).toFixed(2))
+            : 0;
+          const fullWinTotalDollar = Number((actualBankedDollar + remainderTargetAddedDollar).toFixed(2));
+          const fullWinTotalR = actualRiskAmount > 0
+            ? Number((fullWinTotalDollar / actualRiskAmount).toFixed(2))
+            : 0;
+
+          partialDetails.remainderTargetAddedDollar = remainderTargetAddedDollar;
+          partialDetails.remainderTargetAddedR = remainderTargetAddedR;
+          partialDetails.fullWinTotalDollar = fullWinTotalDollar;
+          partialDetails.fullWinTotalR = fullWinTotalR;
+          headlineTargetProfit = fullWinTotalDollar;
+          headlineTargetR = fullWinTotalR;
+        } else {
           headlineTargetR = customR;
           headlineTargetProfit = Number((actualRiskAmount * customR).toFixed(2));
         }

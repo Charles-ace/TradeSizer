@@ -758,4 +758,89 @@ describe('TradeSizer Core Calculation Engine — 3R/2R-Banked/4R-Final & Multi-A
       expect(result.actualRiskAmount).toBeLessThanOrEqual(result.plannedRiskAmount + 0.01);
     }
   });
+  // -------------------------------------------------------------
+  // Test Case 19: User's Screenshot Case — NAS100 (Nasdaq 100) 0.5% Risk on $10k Account
+  // -------------------------------------------------------------
+  it('19. NAS100: $10,000 balance with 0.5% risk, Entry 26,611.0, Stop 26,198.8 (412.2 pts), Target 28,672 (+5R)', () => {
+    const nasSpec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'NAS100')!;
+    expect(nasSpec).toBeDefined();
+
+    const result = calculateTradeSizer({
+      accountBalance: 10000,
+      accountCurrency: 'USD',
+      selectedModelId: 'A',
+      customRiskPercentage: 0.5,
+      category: 'indices',
+      symbol: 'NAS100',
+      direction: 'long',
+      entryPrice: 26611.0,
+      stopLossPrice: 26198.8,
+      takeProfitPrice: 28672.0,
+      stopLossDistance: 412.2,
+      stopLossUnit: 'points',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: true,
+    }, nasSpec);
+
+    expect(result.isValid).toBe(true);
+    expect(result.plannedRiskPercentage).toBe(0.5);
+    expect(result.plannedRiskAmount).toBe(50.0);
+    expect(result.lossPerLotAtStop).toBe(412.2);
+    // 50 / 412.2 = 0.1212999 -> floored to 0.12 lots (step 0.01)
+    expect(result.normalizedPositionSize).toBe(0.12);
+    expect(result.actualRiskAmount).toBe(49.46);
+    expect(result.actualRiskPercentage).toBe(0.49);
+    expect(result.units).toBe(0.12);
+    expect(result.rawUnits).toBe(0.1213);
+
+    // Custom Take Profit 28,672 is 2,061 pts away (exactly 5.0R)
+    // Model A: partial banks 0.07 lots @ 3R = $86.56, runner 0.05 lots @ 5R = $103.05 -> total = $189.61 (+3.83R)
+    expect(result.partialDetails).toBeDefined();
+    expect(result.partialDetails?.canSplit).toBe(true);
+    expect(result.partialDetails?.actualPartialLots).toBe(0.07);
+    expect(result.partialDetails?.remainderLots).toBe(0.05);
+    expect(result.actualTargetProfit).toBe(189.61);
+    expect(result.rewardToRiskRatio).toBe(3.83);
+  });
+
+  // -------------------------------------------------------------
+  // Test Case 20: Indices Stop Distance in Points maintains true 1.0 multiplier
+  // -------------------------------------------------------------
+  it('20. Indices Stop Distance: 50 points on NAS100 produces 50.0 price delta (not 5.0) and accurate target levels', () => {
+    const nasSpec = INSTRUMENT_CATALOG.find((i) => i.symbol === 'NAS100')!;
+    const result = calculateTradeSizer({
+      accountBalance: 10000,
+      accountCurrency: 'USD',
+      selectedModelId: 'A',
+      customRiskPercentage: 1.0,
+      category: 'indices',
+      symbol: 'NAS100',
+      direction: 'long',
+      entryPrice: 20000.0,
+      stopLossDistance: 50.0,
+      stopLossUnit: 'points',
+      exchangeRate: null,
+      leverage: 100,
+      spread: 0,
+      commissionPerLot: 0,
+      moveStopToBreakeven: true,
+    }, nasSpec);
+
+    expect(result.isValid).toBe(true);
+    expect(result.lossPerLotAtStop).toBe(50.0);
+    // 100 / 50 = 2.00 lots
+    expect(result.normalizedPositionSize).toBe(2.00);
+    expect(result.actualRiskAmount).toBe(100.0);
+
+    const partial = result.partialDetails!;
+    // Stop price must be 20000 - 50 = 19950.0 (NOT 19995.0)
+    expect(partial.stopPrice).toBe(19950.0);
+    // 3R trigger price must be 20000 + 150 = 20150.0 (NOT 20015.0)
+    expect(partial.triggerPrice).toBe(20150.0);
+    // 4R final target price must be 20000 + 200 = 20200.0 (NOT 20020.0)
+    expect(partial.finalTargetPrice).toBe(20200.0);
+  });
 });
